@@ -13,17 +13,17 @@
   //The Authority is the DID from your MS AAD Verifiable Credential service, you can copy this from the VC page in azure portal
   "authority": "did:ion: THIS IS YOUR DID FROM THE VC PAGE IN AZURE PORTAL WHICH IS SET IN THE SAMPLE BY COPYING THE VALUE FROM APPSETTINGS.JSON   ",
   "registration": {
-    "clientName": "Verifiable Credential Expert Sample"
+    "clientName": "Verified Employee Credential"
   },
   //The type needs to be the same as defined in the rules json definitione. The manifest can be copied after the credential has been
   //created in the azure portal
-  "type": "VerifiedCredentialExpert",
+  "type": "VerifiedEmployeeCredential",
   "manifest": "CREDENTIAL URL IN THIS SAMPLE WILL BE COPIED FROM APPSETTINGS.JSON",
   //Recommendation is to protect issuance payload with a PIN code. 
   //The pincode is set to a random value in code and will be displayed in the UI to the user
   "pin": {
     "value": "123456",
-    "length": 4
+    "length": 6
   },
   //This is an example payload which will be used in the rules file of the credential.
   //The rules files maps information from the ID Token (hint) to the VC
