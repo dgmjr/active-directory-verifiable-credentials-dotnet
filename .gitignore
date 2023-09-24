@@ -351,3 +351,4 @@ MigrationBackup/
 
 # ignore (private) dev settings
 appsettings.[Dd]evelopment.json
+app/
