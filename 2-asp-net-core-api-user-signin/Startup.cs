@@ -1,15 +1,17 @@
+using System;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using Microsoft.AspNetCore.HttpOverrides;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace AspNetCoreVerifiableCredentials
 {
@@ -31,8 +33,8 @@ namespace AspNetCoreVerifiableCredentials
             //TODO check if this is needed, I only want the issuing website to authenticate the user
             services.AddAuthorization(options =>
             {
-            //    // By default, all incoming requests will be authorized according to the default policy
-            //    options.FallbackPolicy = options.DefaultPolicy;
+                //    // By default, all incoming requests will be authorized according to the default policy
+                //    options.FallbackPolicy = options.DefaultPolicy;
             });
 
 
@@ -47,19 +49,22 @@ namespace AspNetCoreVerifiableCredentials
             services.AddDistributedMemoryCache();
             services.AddSession(options =>
             {
-                options.IdleTimeout = TimeSpan.FromMinutes(1);//You can set Time   
+                options.IdleTimeout = TimeSpan.FromMinutes(1);//You can set Time
                 options.Cookie.IsEssential = true;
                 options.Cookie.SameSite = SameSiteMode.None;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             });
 
- 
+
             services.Configure<CookiePolicyOptions>(options =>
             {
                 // This lambda determines whether user consent for non-essential cookies is needed for a given request.
                 options.CheckConsentNeeded = context => false;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
+
+            // services
+            // .AddSwaggerGen(opts => { });
 
             services.AddRazorPages()
                 .AddMvcOptions(options => { })
@@ -88,11 +93,26 @@ namespace AspNetCoreVerifiableCredentials
             //we want the user to be able to sign-in when VCs are being issued
             app.UseAuthentication();
             app.UseAuthorization();
+            // app.UseSwagger();
+            // app.UseSwaggerUI(opts =>
+            // {
+            //     opts.EnableTryItOutByDefault();
+            //     opts.DefaultModelExpandDepth(0);
+            //     opts.DefaultModelRendering(ModelRendering.Model);
+            //     opts.DisplayOperationId();
+            //     opts.EnableFilter();
+            //     opts.DocExpansion(DocExpansion.None);
+            //     opts.EnablePersistAuthorization();
+            //     opts.DisplayRequestDuration();
+            //     opts.ShowCommonExtensions();
+            //     opts.ShowExtensions();
+            //     opts.SupportedSubmitMethods(SubmitMethod.Get, SubmitMethod.Head, SubmitMethod.Post, SubmitMethod.Put, SubmitMethod.Trace, SubmitMethod.Delete, SubmitMethod.Options, SubmitMethod.Options);
+            // });
 
             app.UseCookiePolicy(new CookiePolicyOptions
             {
                 Secure = CookieSecurePolicy.Always
-             }) ;
+            });
 
             //this setting is used when you use tools like ngrok or reverse proxies like nginx which connect to http://localhost
             //if you don't set this setting the sign-in redirect will be http instead of https

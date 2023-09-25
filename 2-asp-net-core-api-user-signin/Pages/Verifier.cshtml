@@ -6,7 +6,7 @@
            <div style="text-align: center;">
                 <img src="VerifiedCredentialExpert-icon.png" height=200px; />
                 <h1>Verifiable Credential Expert Verification</h1>
-        
+
             <button type="button" id="sign-in" class="button">VERIFY CREDENTIAL</button>
             <div id="qrText"  style="display:none;">
                 <p class="small-text">
@@ -91,7 +91,7 @@
                                                 document.getElementById('qrcode').style.display = "none";
                                                 document.getElementById('message').innerHTML = respMsg.message;
                                             }
-                                    
+
                                             if (respMsg.status == 'presentation_verified') {
                                                 document.getElementById('message').innerHTML = respMsg.message;
                                                 document.getElementById('payload').innerHTML = "Payload: " + JSON.stringify(respMsg.payload);

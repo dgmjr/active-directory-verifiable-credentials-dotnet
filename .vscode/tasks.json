@@ -45,7 +45,8 @@
                 "publish",
                 "${workspaceFolder}/2-asp-net-core-api-user-signin/AspNetCoreVerifiableCredentials.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
+                "/consoleloggerparameters:NoSummary",
+                "-o${workspaceFolder}/2-asp-net-core-api-user-signin/app"
             ],
             "problemMatcher": "$msCompile"
         },
