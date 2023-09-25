@@ -23,10 +23,10 @@ jobs:
           include-prerelease: true
 
       - name: Build with dotnet
-        run: dotnet build ./2-asp-net-core-api-user-signin/AspNetCoreVerifiableCrednetials.csproj --configuration Release
+        run: dotnet build ./2-asp-net-core-api-user-signin/AspNetCoreVerifiableCredentials.csproj
 
       - name: dotnet publish
-        run: dotnet publish ./2-asp-net-core-api-user-signin/AspNetCoreVerifiableCrednetials.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ./2-asp-net-core-api-user-signin/AspNetCoreVerifiableCredentials.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
