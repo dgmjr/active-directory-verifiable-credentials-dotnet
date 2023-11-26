@@ -1,11 +1,11 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
-using Microsoft.Extensions.Configuration;
-using Microsoft.Identity.Web;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Web;
 
 namespace AspNetCoreVerifiableCredentials
 {
@@ -19,10 +19,12 @@ namespace AspNetCoreVerifiableCredentials
         /// instance of Azure AD, for example public Azure or a Sovereign cloud (Azure China, Germany, US government, etc ...)
         /// </summary>
         public string Instance { get; set; }
+
         /// <summary>
         /// URL of the client REST API endpoint, still need to use tenantID, use ApiEndpoint instead.
         /// </summary>
         public string Endpoint { get; set; }
+
         /// <summary>
         /// Web Api scope. With client credentials flows, the scopes is ALWAYS of the shape "resource/.default"
         /// FUTURE THIS WILL CHANGE TO MS GRAPH SCOPE
@@ -40,6 +42,7 @@ namespace AspNetCoreVerifiableCredentials
         public string IssuerAuthority { get; set; }
 
         public string VerifierAuthority { get; set; }
+
         /// <summary>
         /// The Tenant is:
         /// - either the tenant ID of the Azure AD tenant in which this application is registered (a guid)
@@ -47,19 +50,18 @@ namespace AspNetCoreVerifiableCredentials
         /// - or 'organizations' (for a multi-tenant application)
         /// </summary>
         public string TenantId { get; set; }
+
         /// <summary>
         /// Guid used by the application to uniquely identify itself to Azure AD
         /// </summary>
         public string ClientId { get; set; }
+
         /// <summary>
         /// URL of the authority
         /// </summary>
         public string Authority
         {
-            get
-            {
-                return String.Format(CultureInfo.InvariantCulture, Instance, TenantId);
-            }
+            get { return String.Format(CultureInfo.InvariantCulture, Instance, TenantId); }
         }
 
         /// <summary>
@@ -67,19 +69,21 @@ namespace AspNetCoreVerifiableCredentials
         /// </summary>
         /// <remarks>client credential applications can authenticate with AAD through two mechanisms: ClientSecret
         /// (which is a kind of application password: this property)
-        /// or a certificate previously shared with AzureAD during the application registration 
+        /// or a certificate previously shared with AzureAD during the application registration
         /// (and identified by the CertificateName property belows)
-        /// <remarks> 
+        /// <remarks>
         public string ClientSecret { get; set; }
+
         /// <summary>
         /// Name of a certificate in the user certificate store
         /// </summary>
         /// <remarks>client credential applications can authenticate with AAD through two mechanisms: ClientSecret
         /// (which is a kind of application password: the property above)
-        /// or a certificate previously shared with AzureAD during the application registration 
+        /// or a certificate previously shared with AzureAD during the application registration
         /// (and identified by this CertificateName property)
-        /// <remarks> 
+        /// <remarks>
         public string CertificateName { get; set; }
+
         /// <summary>
         /// Checks if the sample is configured for using ClientSecret or Certificate. This method is just for the sake of this sample.
         /// You won't need this verification in your production application since you will be authenticating in AAD using one mechanism only.
@@ -88,36 +92,47 @@ namespace AspNetCoreVerifiableCredentials
         /// <returns></returns>
         public bool AppUsesClientSecret(AppSettingsModel config)
         {
-            string clientSecretPlaceholderValue = "[Enter here a client secret for your application]";
-            string certificatePlaceholderValue = "[Or instead of client secret: Enter here the name of a certificate (from the user cert store) as registered with your application]";
+            const string clientSecretPlaceholderValue =
+                "[Enter here a client secret for your application]";
+            const string certificatePlaceholderValue =
+                "[Or instead of client secret: Enter here the name of a certificate (from the user cert store) as registered with your application]";
 
-            if (!String.IsNullOrWhiteSpace(config.ClientSecret) && config.ClientSecret != clientSecretPlaceholderValue)
+            if (
+                !String.IsNullOrWhiteSpace(config.ClientSecret)
+                && config.ClientSecret != clientSecretPlaceholderValue
+            )
             {
                 return true;
             }
-
-            else if (!String.IsNullOrWhiteSpace(config.CertificateName) && config.CertificateName != certificatePlaceholderValue)
+            else if (
+                !String.IsNullOrWhiteSpace(config.CertificateName)
+                && config.CertificateName != certificatePlaceholderValue
+            )
             {
                 return false;
             }
-
             else
-                throw new Exception("You must choose between using client secret or certificate. Please update appsettings.json file.");
+            {
+                throw new Exception(
+                    "You must choose between using client secret or certificate. Please update appsettings.json file."
+                );
+            }
         }
+
         public X509Certificate2 ReadCertificate(string certificateName)
         {
             if (string.IsNullOrWhiteSpace(certificateName))
             {
-                throw new ArgumentException("certificateName should not be empty. Please set the CertificateName setting in the appsettings.json", "certificateName");
+                throw new ArgumentException(
+                    "certificateName should not be empty. Please set the CertificateName setting in the appsettings.json",
+                    "certificateName"
+                );
             }
-            CertificateDescription certificateDescription = CertificateDescription.FromStoreWithDistinguishedName(certificateName);
-            DefaultCertificateLoader defaultCertificateLoader = new DefaultCertificateLoader();
+            CertificateDescription certificateDescription =
+                CertificateDescription.FromStoreWithDistinguishedName(certificateName);
+            DefaultCertificateLoader defaultCertificateLoader = new();
             defaultCertificateLoader.LoadIfNeeded(certificateDescription);
             return certificateDescription.Certificate;
         }
     }
-
 }
-
-
-

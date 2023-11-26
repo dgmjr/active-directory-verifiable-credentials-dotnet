@@ -17,14 +17,14 @@ namespace AspNetCoreVerifiableCredentialsB2C.Models
         public string client_name { get; set; }
 
         public string TenantId { get; set; }
-        public string scope { get; set;}
+        public string scope { get; set; }
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
         public string Authority { get; set; }
         public string IssuerAuthority { get; set; }
         public string VerifierAuthority { get; set; }
         public string CredentialType { get; set; }
-        public string DidManifest{ get; set; }
+        public string DidManifest { get; set; }
         public string Purpose { get; set; }
         public int IssuancePinCodeLength { get; set; }
         public string B2C1ARestApiKey { get; set; }

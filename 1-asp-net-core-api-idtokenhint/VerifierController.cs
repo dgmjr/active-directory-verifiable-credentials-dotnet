@@ -24,6 +24,7 @@ namespace AspNetCoreVerifiableCredentials
     public class VerifierController : Controller
     {
         const string PRESENTATIONPAYLOAD = "presentation_request_config.json";
+
         //        const string PRESENTATIONPAYLOAD = "presentation_request_config - TrueIdentitySample.json";
 
         protected readonly AppSettingsModel AppSettings;
@@ -31,7 +32,13 @@ namespace AspNetCoreVerifiableCredentials
         protected readonly ILogger<VerifierController> _log;
         private IHttpClientFactory _httpClientFactory;
         private string _apiKey;
-        public VerifierController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, ILogger<VerifierController> log, IHttpClientFactory httpClientFactory)
+
+        public VerifierController(
+            IOptions<AppSettingsModel> appSettings,
+            IMemoryCache memoryCache,
+            ILogger<VerifierController> log,
+            IHttpClientFactory httpClientFactory
+        )
         {
             this.AppSettings = appSettings.Value;
             _cache = memoryCache;
@@ -58,26 +65,42 @@ namespace AspNetCoreVerifiableCredentials
                 UpdatePresentationRequestPayload(payload, state);
                 string jsonString = JsonConvert.SerializeObject(payload);
 
-                 //CALL REST API WITH PAYLOAD
+                //CALL REST API WITH PAYLOAD
                 HttpStatusCode statusCode = HttpStatusCode.OK;
                 string response = null;
                 try
                 {
-                    //The VC Request API is an authenticated API. We need to clientid and secret (or certificate) to create an access token which 
+                    //The VC Request API is an authenticated API. We need to clientid and secret (or certificate) to create an access token which
                     //needs to be send as bearer to the VC Request API
                     var accessToken = await GetAccessToken();
                     if (accessToken.Item1 == String.Empty)
                     {
-                        _log.LogError(String.Format("failed to acquire accesstoken: {0} : {1}"), accessToken.error, accessToken.error_description);
-                        return BadRequest(new { error = accessToken.error, error_description = accessToken.error_description });
+                        _log.LogError(
+                            String.Format("failed to acquire accesstoken: {0} : {1}"),
+                            accessToken.error,
+                            accessToken.error_description
+                        );
+                        return BadRequest(
+                            new
+                            {
+                                error = accessToken.error,
+                                error_description = accessToken.error_description
+                            }
+                        );
                     }
 
-                    _log.LogTrace( $"Request API payload: {jsonString}" );
+                    _log.LogTrace($"Request API payload: {jsonString}");
                     var client = _httpClientFactory.CreateClient();
                     var defaultRequestHeaders = client.DefaultRequestHeaders;
-                    defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.token);
+                    defaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                        "Bearer",
+                        accessToken.token
+                    );
 
-                    HttpResponseMessage res = await client.PostAsync(AppSettings.Endpoint + "verifiableCredentials/createPresentationRequest", new StringContent(jsonString, Encoding.UTF8, "application/json"));
+                    HttpResponseMessage res = await client.PostAsync(
+                        AppSettings.Endpoint + "verifiableCredentials/createPresentationRequest",
+                        new StringContent(jsonString, Encoding.UTF8, "application/json")
+                    );
                     response = await res.Content.ReadAsStringAsync();
                     statusCode = res.StatusCode;
 
@@ -102,17 +125,35 @@ namespace AspNetCoreVerifiableCredentials
                         //it has scanned the QR code. If the payload requested the VC Request service to create the QR code that is returned as well
                         //the javascript in the UI will use that QR code to display it on the screen to the user.
 
-                        return new ContentResult { ContentType = "application/json", Content = jsonString };
+                        return new ContentResult
+                        {
+                            ContentType = "application/json",
+                            Content = jsonString
+                        };
                     }
                     else
                     {
                         _log.LogError("Unsuccesfully called Request API");
-                        return BadRequest(new { error = "400", error_description = "Something went wrong calling the API: " + response });
+                        return BadRequest(
+                            new
+                            {
+                                error = "400",
+                                error_description = "Something went wrong calling the API: "
+                                    + response
+                            }
+                        );
                     }
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new { error = "400", error_description = "Something went wrong calling the API: " + ex.Message });
+                    return BadRequest(
+                        new
+                        {
+                            error = "400",
+                            error_description = "Something went wrong calling the API: "
+                                + ex.Message
+                        }
+                    );
                 }
             }
             catch (Exception ex)
@@ -130,19 +171,28 @@ namespace AspNetCoreVerifiableCredentials
         {
             try
             {
-                string content = await new System.IO.StreamReader(this.Request.Body).ReadToEndAsync();
+                string content = await new System.IO.StreamReader(
+                    this.Request.Body
+                ).ReadToEndAsync();
                 _log.LogTrace("callback!: " + content);
                 this.Request.Headers.TryGetValue("api-key", out var apiKey);
-                if (this._apiKey != apiKey) 
+                if (this._apiKey != apiKey)
                 {
                     _log.LogTrace("api-key wrong or missing");
-                    return new ContentResult() { StatusCode = (int)HttpStatusCode.Unauthorized, Content = "api-key wrong or missing" };
-                }               
+                    return new ContentResult()
+                    {
+                        StatusCode = (int)HttpStatusCode.Unauthorized,
+                        Content = "api-key wrong or missing"
+                    };
+                }
                 JObject presentationResponse = JObject.Parse(content);
                 var requestStatus = presentationResponse["requestStatus"].ToString();
                 var state = presentationResponse["state"].ToString();
-                Dictionary<string, object> cacheData = new Dictionary<string, object>{ { "status", requestStatus } };
-                switch ( requestStatus ) 
+                Dictionary<string, object> cacheData = new Dictionary<string, object>
+                {
+                    { "status", requestStatus }
+                };
+                switch (requestStatus)
                 {
                     // Request is retrieved (QR code scanned)
                     case "request_retrieved":
@@ -151,17 +201,21 @@ namespace AspNetCoreVerifiableCredentials
                     // VC is submitted to VerifiedID and verified
                     case "presentation_verified":
                         cacheData.Add("message", "Presentation verified");
-                        cacheData.Add("subject", presentationResponse["subject"].ToString() );
-                        cacheData.Add("payload", presentationResponse["verifiedCredentialsData"] );
+                        cacheData.Add("subject", presentationResponse["subject"].ToString());
+                        cacheData.Add("payload", presentationResponse["verifiedCredentialsData"]);
                         //firstName = presentationResponse["verifiedCredentialsData"][0]["claims"]["firstName"].ToString(),
                         //lastName = presentationResponse["verifiedCredentialsData"][0]["claims"]["lastName"].ToString(),
-                        cacheData.Add("presentationResponse", presentationResponse );
+                        cacheData.Add("presentationResponse", presentationResponse);
                         // get details on VC, when it was issued, when it expires, etc
-                        if (presentationResponse.ContainsKey("receipt") )
-                        {                                                        
-                            JObject vpToken = GetJsonFromJwtToken(presentationResponse["receipt"]["vp_token"].ToString() );
-                            JObject vc = GetJsonFromJwtToken(vpToken["vp"]["verifiableCredential"][0].ToString());
-                            cacheData.Add("jti", vc["jti"].ToString() );
+                        if (presentationResponse.ContainsKey("receipt"))
+                        {
+                            JObject vpToken = GetJsonFromJwtToken(
+                                presentationResponse["receipt"]["vp_token"].ToString()
+                            );
+                            JObject vc = GetJsonFromJwtToken(
+                                vpToken["vp"]["verifiableCredential"][0].ToString()
+                            );
+                            cacheData.Add("jti", vc["jti"].ToString());
                             cacheData.Add("iat", vc["iat"].ToString());
                             cacheData.Add("exp", vc["exp"].ToString());
                         }
@@ -169,13 +223,21 @@ namespace AspNetCoreVerifiableCredentials
                     // return error if unsupported request status
                     default:
                         _log.LogTrace($"Unsupported requestStatus {requestStatus}");
-                        return new ContentResult() { StatusCode = (int)HttpStatusCode.BadRequest, Content = $"Unsupported requestStatus {requestStatus}" };
+                        return new ContentResult()
+                        {
+                            StatusCode = (int)HttpStatusCode.BadRequest,
+                            Content = $"Unsupported requestStatus {requestStatus}"
+                        };
                 }
                 // return error if state is unknown
                 if (!_cache.TryGetValue(state, out string buf))
                 {
                     _log.LogTrace($"Unknown state {state}");
-                    return new ContentResult() { StatusCode = (int)HttpStatusCode.BadRequest, Content = $"Unknown state {state}" };
+                    return new ContentResult()
+                    {
+                        StatusCode = (int)HttpStatusCode.BadRequest,
+                        Content = $"Unknown state {state}"
+                    };
                 }
                 _cache.Set(state, JsonConvert.SerializeObject(cacheData));
                 return new OkResult();
@@ -185,6 +247,7 @@ namespace AspNetCoreVerifiableCredentials
                 return BadRequest(new { error = "400", error_description = ex.Message });
             }
         }
+
         //
         //this function is called from the UI polling for a response from the AAD VC Service.
         //when a callback is recieved at the presentationCallback service the session will be updated
@@ -200,19 +263,25 @@ namespace AspNetCoreVerifiableCredentials
                 string state = this.Request.Query["id"];
                 if (string.IsNullOrEmpty(state))
                 {
-                    return BadRequest(new { error = "400", error_description = "Missing argument 'id'" });
+                    return BadRequest(
+                        new { error = "400", error_description = "Missing argument 'id'" }
+                    );
                 }
                 JObject value = null;
                 if (_cache.TryGetValue(state, out string buf))
                 {
-                    _log.LogTrace( $"id {state}, cache: {buf}");
+                    _log.LogTrace($"id {state}, cache: {buf}");
                     value = JObject.Parse(buf);
                     // the browser doesn't need the full presentationResponse
-                    if ( value.ContainsKey("presentationResponse") )
+                    if (value.ContainsKey("presentationResponse"))
                     {
                         value.Remove("presentationResponse");
                     }
-                    return new ContentResult { ContentType = "application/json", Content = JsonConvert.SerializeObject(value) };
+                    return new ContentResult
+                    {
+                        ContentType = "application/json",
+                        Content = JsonConvert.SerializeObject(value)
+                    };
                 }
                 return new OkResult();
             }
@@ -221,33 +290,54 @@ namespace AspNetCoreVerifiableCredentials
                 return BadRequest(new { error = "400", error_description = ex.Message });
             }
         }
+
         //
         //this function is called from the UI to get some details to display in the UI about what
         //credential is being asked for
         //
         [HttpGet("/api/verifier/get-presentation-details")]
-        public ActionResult getPresentationDetails() {
-            try {
-                if ( !LoadPresentationRequestFile( out JObject presentationRequest, out String errorMessage ))
+        public ActionResult getPresentationDetails()
+        {
+            try
+            {
+                if (
+                    !LoadPresentationRequestFile(
+                        out JObject presentationRequest,
+                        out String errorMessage
+                    )
+                )
                 {
                     return BadRequest(new { error = "400", error_description = errorMessage });
                 }
-                UpdatePresentationRequestPayload( presentationRequest, "" );
-                var details = new {
+                UpdatePresentationRequestPayload(presentationRequest, "");
+                var details = new
+                {
                     clientName = presentationRequest["registration"]["clientName"].ToString(),
                     purpose = presentationRequest["registration"]["purpose"].ToString(),
                     VerifierAuthority = AppSettings.VerifierAuthority,
                     type = presentationRequest["requestedCredentials"][0]["type"].ToString(),
-                    acceptedIssuers = presentationRequest["requestedCredentials"][0]["acceptedIssuers"]
+                    acceptedIssuers = presentationRequest["requestedCredentials"][0][
+                        "acceptedIssuers"
+                    ]
                 };
-                return new ContentResult { ContentType = "application/json", Content = JsonConvert.SerializeObject(details) };
-            } catch (Exception ex) {
+                return new ContentResult
+                {
+                    ContentType = "application/json",
+                    Content = JsonConvert.SerializeObject(details)
+                };
+            }
+            catch (Exception ex)
+            {
                 return BadRequest(new { error = "400", error_description = ex.Message });
             }
         }
 
         //some helper functions
-        protected async Task<(string token, string error, string error_description)> GetAccessToken()
+        protected async Task<(
+            string token,
+            string error,
+            string error_description
+        )> GetAccessToken()
         {
             // You can run this sample using ClientSecret or Certificate. The code will differ only when instantiating the IConfidentialClientApplication
             bool isUsingClientSecret = AppSettings.AppUsesClientSecret(AppSettings);
@@ -256,15 +346,19 @@ namespace AspNetCoreVerifiableCredentials
             IConfidentialClientApplication app;
             if (isUsingClientSecret)
             {
-                app = ConfidentialClientApplicationBuilder.Create(AppSettings.ClientId)
+                app = ConfidentialClientApplicationBuilder
+                    .Create(AppSettings.ClientId)
                     .WithClientSecret(AppSettings.ClientSecret)
                     .WithAuthority(new Uri(AppSettings.Authority))
                     .Build();
             }
             else
             {
-                X509Certificate2 certificate = AppSettings.ReadCertificate(AppSettings.CertificateName);
-                app = ConfidentialClientApplicationBuilder.Create(AppSettings.ClientId)
+                X509Certificate2 certificate = AppSettings.ReadCertificate(
+                    AppSettings.CertificateName
+                );
+                app = ConfidentialClientApplicationBuilder
+                    .Create(AppSettings.ClientId)
                     .WithCertificate(certificate)
                     .WithAuthority(new Uri(AppSettings.Authority))
                     .Build();
@@ -275,20 +369,22 @@ namespace AspNetCoreVerifiableCredentials
             app.AddDistributedTokenCache(services =>
             {
                 services.AddDistributedMemoryCache();
-                services.AddLogging(configure => configure.AddConsole())
-                .Configure<LoggerFilterOptions>(options => options.MinLevel = Microsoft.Extensions.Logging.LogLevel.Debug);
+                services
+                    .AddLogging(configure => configure.AddConsole())
+                    .Configure<LoggerFilterOptions>(
+                        options => options.MinLevel = Microsoft.Extensions.Logging.LogLevel.Debug
+                    );
             });
 
-            // With client credentials flows the scopes is ALWAYS of the shape "resource/.default", as the 
+            // With client credentials flows the scopes is ALWAYS of the shape "resource/.default", as the
             // application permissions need to be set statically (in the portal or by PowerShell), and then granted by
-            // a tenant administrator. 
+            // a tenant administrator.
             string[] scopes = new string[] { AppSettings.VCServiceScope };
 
             AuthenticationResult result = null;
             try
             {
-                result = await app.AcquireTokenForClient(scopes)
-                    .ExecuteAsync();
+                result = await app.AcquireTokenForClient(scopes).ExecuteAsync();
             }
             catch (MsalServiceException ex) when (ex.Message.Contains("AADSTS70011"))
             {
@@ -300,37 +396,49 @@ namespace AspNetCoreVerifiableCredentials
             catch (MsalServiceException ex)
             {
                 // general error getting an access token
-                return (String.Empty, "500", "Something went wrong getting an access token for the client API:" + ex.Message);
+                return (
+                    String.Empty,
+                    "500",
+                    "Something went wrong getting an access token for the client API:" + ex.Message
+                );
                 //return BadRequest(new { error = "500", error_description = "Something went wrong getting an access token for the client API:" + ex.Message });
             }
 
             _log.LogTrace(result.AccessToken);
             return (result.AccessToken, String.Empty, String.Empty);
         }
+
         protected string GetRequestHostName()
         {
-            string scheme = "https";// : this.Request.Scheme;
+            string scheme = "https"; // : this.Request.Scheme;
             string originalHost = this.Request.Headers["x-original-host"];
             string hostname = "";
             if (!string.IsNullOrEmpty(originalHost))
                 hostname = string.Format("{0}://{1}", scheme, originalHost);
-            else hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
+            else
+                hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
             return hostname;
         }
+
         // load the presentation_request_config.json file
-        public bool LoadPresentationRequestFile( out JObject payload, out string errorMessage ) 
+        public bool LoadPresentationRequestFile(out JObject payload, out string errorMessage)
         {
             payload = null;
             errorMessage = null;
-            string payloadpath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location), PRESENTATIONPAYLOAD);
+            string payloadpath = Path.Combine(
+                Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location),
+                PRESENTATIONPAYLOAD
+            );
             _log.LogTrace("IssuanceRequest file: {0}", payloadpath);
-            if (!System.IO.File.Exists(payloadpath)) {
+            if (!System.IO.File.Exists(payloadpath))
+            {
                 _log.LogError("File not found: {0}", payloadpath);
                 errorMessage = PRESENTATIONPAYLOAD + " not found";
                 return false;
             }
             String jsonString = System.IO.File.ReadAllText(payloadpath);
-            if (string.IsNullOrEmpty(jsonString)) {
+            if (string.IsNullOrEmpty(jsonString))
+            {
                 _log.LogError("Error reading file: {0}", payloadpath);
                 errorMessage = PRESENTATIONPAYLOAD + " error reading file";
                 return false;
@@ -340,15 +448,17 @@ namespace AspNetCoreVerifiableCredentials
         }
 
         // update the loaded presentation_request_config.json file with config value
-        private void UpdatePresentationRequestPayload(JObject presentationRequest, string state) 
+        private void UpdatePresentationRequestPayload(JObject presentationRequest, string state)
         {
             //modify payload with new state, the state is used to be able to update the UI when callbacks are received from the VC Service
-            if (presentationRequest["callback"]["state"] != null) {
+            if (presentationRequest["callback"]["state"] != null)
+            {
                 presentationRequest["callback"]["state"] = state;
             }
 
             //get the VerifierDID from the appsettings
-            if (presentationRequest["authority"] != null) {
+            if (presentationRequest["authority"] != null)
+            {
                 presentationRequest["authority"] = AppSettings.VerifierAuthority;
             }
 
@@ -356,34 +466,43 @@ namespace AspNetCoreVerifiableCredentials
             //this means only that issuer should be trusted for the requested credentialtype
             //this value is an array in the payload, you can trust multiple issuers for the same credentialtype
             //very common to accept the test VCs and the Production VCs coming from different verifiable credential services
-            if (presentationRequest["requestedCredentials"][0]["acceptedIssuers"][0] != null) {
-                presentationRequest["requestedCredentials"][0]["acceptedIssuers"][0] = AppSettings.IssuerAuthority;
+            if (presentationRequest["requestedCredentials"][0]["acceptedIssuers"][0] != null)
+            {
+                presentationRequest["requestedCredentials"][0]["acceptedIssuers"][0] =
+                    AppSettings.IssuerAuthority;
             }
 
             //modify the callback method to make it easier to debug with tools like ngrok since the URI changes all the time
             //this way you don't need to modify the callback URL in the payload every time ngrok changes the URI
-            if (presentationRequest["callback"]["url"] != null) {
+            if (presentationRequest["callback"]["url"] != null)
+            {
                 //localhost hostname can't work for callbacks so we won't overwrite it.
                 //this happens for example when testing with sign-in to an IDP and https://localhost is used as redirect URI
                 //in that case the callback should be configured in the payload directly instead of being modified in the code here
                 string host = GetRequestHostName();
-                if (!host.Contains("//localhost")) {
-                    presentationRequest["callback"]["url"] = String.Format("{0}:/api/verifier/presentationCallback", host);
+                if (!host.Contains("//localhost"))
+                {
+                    presentationRequest["callback"]["url"] = String.Format(
+                        "{0}:/api/verifier/presentationCallback",
+                        host
+                    );
                 }
             }
 
             // set our api-key in the request so we can check it in the callbacks we receive
-            if (presentationRequest["callback"]["headers"]["api-key"] != null) {
+            if (presentationRequest["callback"]["headers"]["api-key"] != null)
+            {
                 presentationRequest["callback"]["headers"]["api-key"] = this._apiKey;
             }
         }
 
         public JObject GetJsonFromJwtToken(string jwtToken)
-        {            
+        {
             jwtToken = jwtToken.Replace("_", "/").Replace("-", "+").Split(".")[1];
             jwtToken = jwtToken.PadRight(4 * ((jwtToken.Length + 3) / 4), '=');
-            return JObject.Parse(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(jwtToken)) );
+            return JObject.Parse(
+                System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(jwtToken))
+            );
         }
-
     }
 }

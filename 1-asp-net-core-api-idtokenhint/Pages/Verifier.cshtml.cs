@@ -9,8 +9,6 @@ namespace AspNetCoreVerifiableCredentials.Pages
 {
     public class VerifierModel : PageModel
     {
-        public void OnGet()
-        {
-        }
+        public void OnGet() { }
     }
 }

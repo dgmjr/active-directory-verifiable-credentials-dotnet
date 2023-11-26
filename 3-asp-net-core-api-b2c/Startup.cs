@@ -18,7 +18,7 @@ namespace AspNetCoreVerifiableCredentialsB2C
     {
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;            
+            Configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
@@ -28,12 +28,16 @@ namespace AspNetCoreVerifiableCredentialsB2C
         {
             services.AddControllersWithViews();
 
-            services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
-            {
-                builder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
-            }));
+            services.AddCors(
+                o =>
+                    o.AddPolicy(
+                        "MyPolicy",
+                        builder =>
+                        {
+                            builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                        }
+                    )
+            );
 
             services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
             // If using Kestrel:
@@ -51,7 +55,7 @@ namespace AspNetCoreVerifiableCredentialsB2C
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if ( env.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -75,7 +79,7 @@ namespace AspNetCoreVerifiableCredentialsB2C
                 endpoints.MapDefaultControllerRoute();
             });
 
-            System.Environment.SetEnvironmentVariable("INMEM-API-KEY", Guid.NewGuid().ToString() );
+            System.Environment.SetEnvironmentVariable("INMEM-API-KEY", Guid.NewGuid().ToString());
         }
     }
 }

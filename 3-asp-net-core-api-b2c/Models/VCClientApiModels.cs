@@ -30,11 +30,11 @@ namespace AspNetCoreVerifiableCredentialsB2C.Models
         public bool includeQRCode { get; set; }
         public Registration registration { get; set; }
         public Callback callback { get; set; }
+
         //public Presentation presentation { get; set; }
         public bool includeReceipt { get; set; }
         public List<RequestedCredential> requestedCredentials { get; set; }
         public Configuration configuration { get; set; }
-
     }
 
     /// <summary>
@@ -44,6 +44,7 @@ namespace AspNetCoreVerifiableCredentialsB2C.Models
     {
         public Validation validation { get; set; }
     }
+
     /// <summary>
     /// Validation - presentation validation configuration
     /// </summary>
@@ -66,7 +67,7 @@ namespace AspNetCoreVerifiableCredentialsB2C.Models
     /// Callback - defines where and how we want our callback.
     /// url - points back to us
     /// state - something we pass that we get back in the callback event. We use it as a correlation id
-    /// headers - any additional HTTP headers you want to pass to the VC Client API. 
+    /// headers - any additional HTTP headers you want to pass to the VC Client API.
     /// The values you pass will be returned, as HTTP Headers, in the callback
     public class Callback
     {
@@ -161,5 +162,4 @@ namespace AspNetCoreVerifiableCredentialsB2C.Models
         public string[] type { get; set; }
         public IDictionary<string, string> claims { get; set; }
     }
-
 } // ns

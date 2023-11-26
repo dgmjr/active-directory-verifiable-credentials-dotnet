@@ -15,7 +15,7 @@
   "registration": {
     "clientName": "Verifiable Credential Expert Sample"
   },
-  //The type needs to be the same as defined in the rules json definitione. The manifest can be copied after the credential has been
+  //The type needs to be the same as defined in the rules json definitions. The manifest can be copied after the credential has been
   //created in the azure portal
   "type": "VerifiedCredentialExpert",
   "manifest": "CREDENTIAL URL IN THIS SAMPLE WILL BE COPIED FROM APPSETTINGS.JSON",

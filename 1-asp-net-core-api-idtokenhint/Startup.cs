@@ -21,27 +21,29 @@ namespace AspNetCoreVerifiableCredentials
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
             services.Configure<KestrelServerOptions>(options =>
             {
                 options.AllowSynchronousIO = true;
             });
 
-            services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
-            {
-                builder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
-                    // .WithOrigins("http://example.com","http://www.contoso.com");
-            }));
+            services.AddCors(
+                o =>
+                    o.AddPolicy(
+                        "MyPolicy",
+                        builder =>
+                        {
+                            builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                            // .WithOrigins("http://example.com","http://www.contoso.com");
+                        }
+                    )
+            );
 
             services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
-
 
             services.AddDistributedMemoryCache();
             services.AddSession(options =>
             {
-                options.IdleTimeout = TimeSpan.FromMinutes(1);//You can set Time   
+                options.IdleTimeout = TimeSpan.FromMinutes(1); //You can set Time
                 options.Cookie.IsEssential = true;
             });
             services.Configure<CookiePolicyOptions>(options =>
@@ -52,7 +54,7 @@ namespace AspNetCoreVerifiableCredentials
             });
 
             services.AddRazorPages();
-            services.AddHttpClient();  // use iHttpFactory as best practice, should be easy to use extra retry and hold off policies in the future
+            services.AddHttpClient(); // use iHttpFactory as best practice, should be easy to use extra retry and hold off policies in the future
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

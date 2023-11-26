@@ -1,14 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client;
-using Microsoft.Identity.Web;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,6 +10,16 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
+using Microsoft.Identity.Web;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace AspNetCoreVerifiableCredentials
 {
@@ -33,7 +33,11 @@ namespace AspNetCoreVerifiableCredentials
         protected IMemoryCache _cache;
         protected readonly ILogger<IssuerController> _log;
 
-        public IssuerController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, ILogger<IssuerController> log)
+        public IssuerController(
+            IOptions<AppSettingsModel> appSettings,
+            IMemoryCache memoryCache,
+            ILogger<IssuerController> log
+        )
         {
             this.AppSettings = appSettings.Value;
             _cache = memoryCache;
@@ -51,24 +55,35 @@ namespace AspNetCoreVerifiableCredentials
             try
             {
                 //they payload template is loaded from disk and modified in the code below to make it easier to get started
-                //and having all config in a central location appsettings.json. 
+                //and having all config in a central location appsettings.json.
                 //if you want to manually change the payload in the json file make sure you comment out the code below which will modify it automatically
                 //
                 string jsonString = null;
                 string newpin = null;
 
-                string payloadpath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location), ISSUANCEPAYLOAD);
-                _log.LogTrace("IssuanceRequest file: {0}", payloadpath);
+                string payloadpath = Path.Combine(
+                    Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location),
+                    ISSUANCEPAYLOAD
+                );
+                _log.LogIssuanceRequest(payloadpath);
                 if (!System.IO.File.Exists(payloadpath))
                 {
-                    _log.LogError("File not found: {0}", payloadpath);
-                    return BadRequest(new { error = "400", error_description = ISSUANCEPAYLOAD + " not found" });
+                    _log.LogFileNotFoundError(payloadpath);
+                    return BadRequest(
+                        new { error = "400", error_description = ISSUANCEPAYLOAD + " not found" }
+                    );
                 }
                 jsonString = System.IO.File.ReadAllText(payloadpath);
                 if (string.IsNullOrEmpty(jsonString))
                 {
-                    _log.LogError("Error reading file: {0}", payloadpath);
-                    return BadRequest(new { error = "400", error_description = ISSUANCEPAYLOAD + " error reading file" });
+                    _log.LogErrorReadingFile(payloadpath);
+                    return BadRequest(
+                        new
+                        {
+                            error = "400",
+                            error_description = ISSUANCEPAYLOAD + " error reading file"
+                        }
+                    );
                 }
 
                 //check if pin is required, if found make sure we set a new random pin
@@ -78,21 +93,19 @@ namespace AspNetCoreVerifiableCredentials
                 {
                     if (IsMobile())
                     {
-                        _log.LogTrace("pin element found in JSON payload, but on mobile so remove pin since we will be using deeplinking");
+                        _log.LogPinElementFoundInJsonPayload_RemovingPin();
                         //consider providing the PIN through other means to your user instead of removing it.
                         payload["pin"].Parent.Remove();
-
                     }
                     else
                     {
-                        _log.LogTrace("pin element found in JSON payload, modifying to a random number of the specific length");
+                        _log.LogPinElementFoundInJsonPayload_UsingRandomNumber();
                         var length = (int)payload["pin"]["length"];
                         var pinMaxValue = (int)Math.Pow(10, length) - 1;
                         var randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                         newpin = string.Format("{0:D" + length.ToString() + "}", randomNumber);
                         payload["pin"]["value"] = newpin;
                     }
-
                 }
 
                 string state = Guid.NewGuid().ToString();
@@ -109,7 +122,7 @@ namespace AspNetCoreVerifiableCredentials
                     payload["authority"] = AppSettings.IssuerAuthority;
                 }
 
-                //modify the callback method to make it easier to debug 
+                //modify the callback method to make it easier to debug
                 //with tools like ngrok since the URI changes all the time
                 //this way you don't need to modify the callback URL in the payload every time
                 //ngrok changes the URI
@@ -121,22 +134,28 @@ namespace AspNetCoreVerifiableCredentials
                     string host = GetRequestHostName();
                     if (!host.Contains("//localhost"))
                     {
-                        payload["callback"]["url"] = String.Format("{0}/api/issuer/issuanceCallback", host);
+                        payload["callback"]["url"] = String.Format(
+                            "{0}/api/issuer/issuanceCallback",
+                            host
+                        );
                     }
                     else
                     {
                         if (!String.IsNullOrWhiteSpace(AppSettings.VCCallbackHostURL))
                         {
-                            payload["callback"]["url"] = String.Format("{0}/api/issuer/issuanceCallback", AppSettings.VCCallbackHostURL);
+                            payload["callback"]["url"] = String.Format(
+                                "{0}/api/issuer/issuanceCallback",
+                                AppSettings.VCCallbackHostURL
+                            );
                         }
                         else
                         {
-                            _log.LogError(String.Format("VCCallbackHostURL is not set in the AppSettings section of appsettings.json file. Please refer to README section on Running the sample for instructions on how to set this value."));
+                            _log.LogVCCallbackHostUrlNotSetError();
                         }
                     }
                 }
 
-                //get the manifest from the appsettings, this is the URL to the credential created in the azure portal. 
+                //get the manifest from the appsettings, this is the URL to the credential created in the azure portal.
                 //the display and rules file to create the credential can be dound in the credentialfiles directory
                 //make sure the credentialtype in the issuance payload matches with the rules file
                 //for this sample it should be VerifiedCredentialExpert
@@ -146,8 +165,12 @@ namespace AspNetCoreVerifiableCredentials
                 }
 
                 //retrieve the 2 optional claims to use as part of the payload to get a VC
-                var given_name = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value;
-                var family_name = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value;
+                var given_name = HttpContext.User.Claims
+                    .FirstOrDefault(c => c.Type == ClaimTypes.GivenName)
+                    ?.Value;
+                var family_name = HttpContext.User.Claims
+                    .FirstOrDefault(c => c.Type == ClaimTypes.Surname)
+                    ?.Value;
 
                 payload["claims"]["given_name"] = given_name;
                 payload["claims"]["family_name"] = family_name;
@@ -160,21 +183,36 @@ namespace AspNetCoreVerifiableCredentials
 
                 try
                 {
-                    //The VC Request API is an authenticated API. We need to clientid and secret (or certificate) to create an access token which 
+                    //The VC Request API is an authenticated API. We need to clientid and secret (or certificate) to create an access token which
                     //needs to be send as bearer to the VC Request API
                     var accessToken = await GetAccessToken();
                     if (accessToken.Item1 == String.Empty)
                     {
-                        _log.LogError(String.Format("failed to acquire accesstoken: {0} : {1}"), accessToken.error, accessToken.error_description);
-                        return BadRequest(new { error = accessToken.error, error_description = accessToken.error_description });
+                        _log.LogError(
+                            String.Format("failed to acquire accesstoken: {0} : {1}"),
+                            accessToken.error,
+                            accessToken.error_description
+                        );
+                        return BadRequest(
+                            new
+                            {
+                                error = accessToken.error,
+                                error_description = accessToken.error_description
+                            }
+                        );
                     }
 
-
-                    HttpClient client = new HttpClient();
+                    var client = new HttpClient();
                     var defaultRequestHeaders = client.DefaultRequestHeaders;
-                    defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.token);
+                    defaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                        "Bearer",
+                        accessToken.token
+                    );
 
-                    HttpResponseMessage res = await client.PostAsync(AppSettings.Endpoint + "verifiableCredentials/createIssuanceRequest", new StringContent(jsonString, Encoding.UTF8, "application/json"));
+                    HttpResponseMessage res = await client.PostAsync(
+                        AppSettings.Endpoint + "verifiableCredentials/createIssuanceRequest",
+                        new StringContent(jsonString, Encoding.UTF8, "application/json")
+                    );
                     response = await res.Content.ReadAsStringAsync();
                     client.Dispose();
                     statusCode = res.StatusCode;
@@ -183,7 +221,10 @@ namespace AspNetCoreVerifiableCredentials
                     {
                         _log.LogTrace("succesfully called Request API");
                         JObject requestConfig = JObject.Parse(response);
-                        if (newpin != null) { requestConfig["pin"] = newpin; }
+                        if (newpin != null)
+                        {
+                            requestConfig["pin"] = newpin;
+                        }
                         requestConfig.Add(new JProperty("id", state));
                         jsonString = JsonConvert.SerializeObject(requestConfig);
 
@@ -197,18 +238,35 @@ namespace AspNetCoreVerifiableCredentials
                         };
                         _cache.Set(state, JsonConvert.SerializeObject(cacheData));
 
-                        return new ContentResult { ContentType = "application/json", Content = jsonString };
+                        return new ContentResult
+                        {
+                            ContentType = "application/json",
+                            Content = jsonString
+                        };
                     }
                     else
                     {
                         _log.LogError("Unsuccesfully called Request API: " + response);
-                        return BadRequest(new { error = statusCode, error_description = "Something went wrong calling the API: " + response });
+                        return BadRequest(
+                            new
+                            {
+                                error = statusCode,
+                                error_description = "Something went wrong calling the API: "
+                                    + response
+                            }
+                        );
                     }
-
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(new { error = "400", error_description = "Something went wrong calling the API: " + ex.Message });
+                    return BadRequest(
+                        new
+                        {
+                            error = "400",
+                            error_description = "Something went wrong calling the API: "
+                                + ex.Message
+                        }
+                    );
                 }
             }
             catch (Exception ex)
@@ -226,7 +284,9 @@ namespace AspNetCoreVerifiableCredentials
         {
             try
             {
-                string content = await new System.IO.StreamReader(this.Request.Body).ReadToEndAsync();
+                string content = await new System.IO.StreamReader(
+                    this.Request.Body
+                ).ReadToEndAsync();
                 _log.LogTrace("callback!: " + content);
                 JObject issuanceResponse = JObject.Parse(content);
                 var state = issuanceResponse["state"].ToString();
@@ -270,7 +330,6 @@ namespace AspNetCoreVerifiableCredentials
                         //at the moment there isn't a specific error for incorrect entry of a pincode.
                         //So assume this error happens when the users entered the incorrect pincode and ask to try again.
                         message = issuanceResponse["error"]["message"].ToString()
-
                     };
                     _cache.Set(state, JsonConvert.SerializeObject(cacheData));
                 }
@@ -298,7 +357,9 @@ namespace AspNetCoreVerifiableCredentials
                 string state = this.Request.Query["id"];
                 if (string.IsNullOrEmpty(state))
                 {
-                    return BadRequest(new { error = "400", error_description = "Missing argument 'id'" });
+                    return BadRequest(
+                        new { error = "400", error_description = "Missing argument 'id'" }
+                    );
                 }
                 JObject value = null;
                 if (_cache.TryGetValue(state, out string buf))
@@ -306,7 +367,11 @@ namespace AspNetCoreVerifiableCredentials
                     value = JObject.Parse(buf);
 
                     Debug.WriteLine("check if there was a response yet: " + value);
-                    return new ContentResult { ContentType = "application/json", Content = JsonConvert.SerializeObject(value) };
+                    return new ContentResult
+                    {
+                        ContentType = "application/json",
+                        Content = JsonConvert.SerializeObject(value)
+                    };
                 }
 
                 return new OkResult();
@@ -318,9 +383,12 @@ namespace AspNetCoreVerifiableCredentials
         }
 
         //some helper functions
-        protected async Task<(string token, string error, string error_description)> GetAccessToken()
+        protected async Task<(
+            string token,
+            string error,
+            string error_description
+        )> GetAccessToken()
         {
-
             // You can run this sample using ClientSecret or Certificate. The code will differ only when instantiating the IConfidentialClientApplication
             bool isUsingClientSecret = AppSettings.AppUsesClientSecret(AppSettings);
 
@@ -328,15 +396,19 @@ namespace AspNetCoreVerifiableCredentials
             IConfidentialClientApplication app;
             if (isUsingClientSecret)
             {
-                app = ConfidentialClientApplicationBuilder.Create(AppSettings.ClientId)
+                app = ConfidentialClientApplicationBuilder
+                    .Create(AppSettings.ClientId)
                     .WithClientSecret(AppSettings.ClientSecret)
-                    .WithAuthority(new Uri(AppSettings.Authority))
+                    .WithAuthority(new Uri(AppSettings.Authority), true)
                     .Build();
             }
             else
             {
-                X509Certificate2 certificate = AppSettings.ReadCertificate(AppSettings.CertificateName);
-                app = ConfidentialClientApplicationBuilder.Create(AppSettings.ClientId)
+                X509Certificate2 certificate = AppSettings.ReadCertificate(
+                    AppSettings.CertificateName
+                );
+                app = ConfidentialClientApplicationBuilder
+                    .Create(AppSettings.ClientId)
                     .WithCertificate(certificate)
                     .WithAuthority(new Uri(AppSettings.Authority))
                     .Build();
@@ -347,20 +419,22 @@ namespace AspNetCoreVerifiableCredentials
             app.AddDistributedTokenCache(services =>
             {
                 services.AddDistributedMemoryCache();
-                services.AddLogging(configure => configure.AddConsole())
-                .Configure<LoggerFilterOptions>(options => options.MinLevel = Microsoft.Extensions.Logging.LogLevel.Debug);
+                services
+                    .AddLogging(configure => configure.AddConsole())
+                    .Configure<LoggerFilterOptions>(
+                        options => options.MinLevel = Microsoft.Extensions.Logging.LogLevel.Debug
+                    );
             });
 
-            // With client credentials flows the scopes is ALWAYS of the shape "resource/.default", as the 
+            // With client credentials flows the scopes is ALWAYS of the shape "resource/.default", as the
             // application permissions need to be set statically (in the portal or by PowerShell), and then granted by
-            // a tenant administrator. 
+            // a tenant administrator.
             string[] scopes = new string[] { AppSettings.VCServiceScope };
 
             AuthenticationResult result = null;
             try
             {
-                result = await app.AcquireTokenForClient(scopes)
-                    .ExecuteAsync();
+                result = await app.AcquireTokenForClient(scopes).ExecuteAsync();
             }
             catch (MsalServiceException ex) when (ex.Message.Contains("AADSTS70011"))
             {
@@ -372,21 +446,27 @@ namespace AspNetCoreVerifiableCredentials
             catch (MsalServiceException ex)
             {
                 // general error getting an access token
-                return (String.Empty, "500", "Something went wrong getting an access token for the client API:" + ex.Message);
+                return (
+                    String.Empty,
+                    "500",
+                    "Something went wrong getting an access token for the client API:" + ex.Message
+                );
                 //return BadRequest(new { error = "500", error_description = "Something went wrong getting an access token for the client API:" + ex.Message });
             }
 
             _log.LogTrace(result.AccessToken);
-            return (result.AccessToken, String.Empty, String.Empty);
+            return (result.AccessToken, string.Empty, string.Empty);
         }
+
         protected string GetRequestHostName()
         {
-            string scheme = "https";// : this.Request.Scheme;
+            string scheme = "https"; // : this.Request.Scheme;
             string originalHost = this.Request.Headers["x-original-host"];
             string hostname = "";
             if (!string.IsNullOrEmpty(originalHost))
                 hostname = string.Format("{0}://{1}", scheme, originalHost);
-            else hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
+            else
+                hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
             return hostname;
         }
 
